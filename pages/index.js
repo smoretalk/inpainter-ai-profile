@@ -178,7 +178,7 @@ export default function Home() {
 								target="_blank"
 								rel="noopener noreferrer"
 							>
-								AI Profile is a demo site from <u>Smoretalk</u>
+								AI profile demo powered by <u>Smoretalk</u>
 							</a>
 						</Link>
 					</div>
