@@ -7,7 +7,7 @@ import PromptForm from "components/prompt-form";
 import Dropzone from "components/dropzone";
 import Download from "components/download";
 import { XCircle as StartOverIcon } from "lucide-react";
-import poseImage from "../public/pose-image.png";
+import * as Bytescale from "@bytescale/sdk";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -21,10 +21,9 @@ export default function Home() {
 
 		const body = {
 			gender: e.target.gender.value,
-			image: userUploadedImage
-				? await readAsDataURL(userUploadedImage)
-				: null,
-			pose_image: poseImage,
+			image: userUploadedImage,
+			pose_image:
+				"https://upcdn.io/FW25bxn/raw/uploads/image%20-%202024-02-21T014551.557.png",
 		};
 
 		const response = await fetch("/api/predictions", {
@@ -54,10 +53,6 @@ export default function Home() {
 				return;
 			}
 			setPredictions(predictions.concat([prediction]));
-
-			if (prediction.status === "succeeded") {
-				setUserUploadedImage(null);
-			}
 		}
 	};
 
@@ -66,6 +61,21 @@ export default function Home() {
 		setPredictions([]);
 		setError(null);
 		setUserUploadedImage(null);
+	};
+
+	const onImageDropped = (file) => {
+		const uploadManager = new Bytescale.UploadManager({
+			apiKey: process.env.NEXT_PUBLIC_ACCOUNT_ID, // Get API key: https://www.bytescale.com/get-started
+		});
+
+		uploadManager.upload({ data: file }).then(
+			(resp) => {
+				setUserUploadedImage(resp.fileUrl);
+			},
+			(error) => {
+				alert(error);
+			}
+		);
 	};
 
 	return (
@@ -87,7 +97,7 @@ export default function Home() {
 				<div className="flex flex-wrap">
 					<div className="mt-5 border-hairline w-[450px] mx-auto relative">
 						<Dropzone
-							onImageDropped={setUserUploadedImage}
+							onImageDropped={onImageDropped}
 							predictions={predictions}
 							userUploadedImage={userUploadedImage}
 						/>

@@ -53,7 +53,7 @@ export default class Canvas extends React.Component {
 				{/* USER UPLOADED IMAGE */}
 				{this.props.userUploadedImage && (
 					<Image
-						src={URL.createObjectURL(this.props.userUploadedImage)}
+						src={this.props.userUploadedImage}
 						alt="preview image"
 						layout="fill"
 						draggable="false"

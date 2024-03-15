@@ -27,8 +27,8 @@ export default function PromptForm(props) {
 					defaultValue={"Female"}
 					className="border py-1 px-4 rounded-md"
 				>
-					<option value="male">Male</option>
-					<option value="female">Female</option>
+					<option value="Male">Male</option>
+					<option value="Female">Female</option>
 				</select>
 				<button
 					className="bg-black text-white rounded-md text-small inline-block px-6 flex-none"
