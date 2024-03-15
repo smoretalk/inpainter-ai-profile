@@ -1,59 +1,165 @@
+import { useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
+import Canvas from "components/canvas";
+import PromptForm from "components/prompt-form";
+import Dropzone from "components/dropzone";
+import Download from "components/download";
+import { XCircle as StartOverIcon } from "lucide-react";
+import { Rocket as RocketIcon } from "lucide-react";
 
-export default function About() {
-  return (
-    <div className="max-w-[512px] mx-auto p-10 bg-white rounded-lg">
-      <Head>
-        <title>Inpainting with Stable Diffusion &amp; Replicate</title>
-        <meta name="viewport" content="initial-scale=1.0, width=device-width" />
-      </Head>
-      {/* <h1 className="text-center text-7xl pb-3">🎨</h1> */}
-      <p className="pb-5 text-lg">
-        <strong>Inpainting</strong> is a process where missing parts of an
-        artwork are filled in to present a complete image. This{" "}
-        <a className="underline" href="https://github.com/zeke/inpainter">
-          open-source demo
-        </a>{" "}
-        uses the{" "}
-        <a
-          className="underline"
-          href="https://replicate.com/stability-ai/stable-diffusion"
-        >
-          Stable Diffusion
-        </a>{" "}
-        machine learning model and{" "}
-        <a className="underline" href="https://replicate.com">
-          Replicate&apos;s API
-        </a>{" "}
-        to inpaint images right in your browser.
-      </p>
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-      <Link href="/paint">
-        <video autoPlay loop muted playsInline className="w-full cursor-pointer">
-          <source src="/cherries-oranges-bananas.mp4" />
-        </video>
-      </Link>
+export default function Home() {
+	const [predictions, setPredictions] = useState([]);
+	const [error, setError] = useState(null);
+	const [userUploadedImage, setUserUploadedImage] = useState(null);
 
-      {/* <ol className="list-decimal pl-5">
-        <li className="mb-2">
-          Enter a text prompt to generate an image, or upload your own starting
-          image.
-        </li>
-        <li className="mb-2">
-          Click and drag with your mouse to erase unwanted parts of the image.
-        </li>
-        <li className="mb-2">
-          Refine your text prompt (or leave it untouched) and let the model
-          generate a new inpainted image.
-        </li>
-      </ol> */}
+	const handleSubmit = async (e) => {
+		e.preventDefault();
 
-      <Link href="/paint">
-        <a className="py-3 block text-center bg-black text-white rounded-md mt-10">
-          Start painting
-        </a>
-      </Link>
-    </div>
-  );
+		const prevPrediction = predictions[predictions.length - 1];
+		const prevPredictionOutput = prevPrediction?.output
+			? prevPrediction.output[prevPrediction.output.length - 1]
+			: null;
+		console.log(e.target.gender.value);
+		const body = {
+			prompt: e.target.gender.value,
+			init_image: userUploadedImage
+				? await readAsDataURL(userUploadedImage)
+				: // only use previous prediction as init image if there's a mask
+				maskImage
+				? prevPredictionOutput
+				: null,
+		};
+
+		const response = await fetch("/api/predictions", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(body),
+		});
+		const prediction = await response.json();
+
+		if (response.status !== 201) {
+			setError(prediction.detail);
+			return;
+		}
+		setPredictions(predictions.concat([prediction]));
+
+		while (
+			prediction.status !== "succeeded" &&
+			prediction.status !== "failed"
+		) {
+			await sleep(1000);
+			const response = await fetch("/api/predictions/" + prediction.id);
+			prediction = await response.json();
+			if (response.status !== 200) {
+				setError(prediction.detail);
+				return;
+			}
+			setPredictions(predictions.concat([prediction]));
+
+			if (prediction.status === "succeeded") {
+				setUserUploadedImage(null);
+			}
+		}
+	};
+
+	const startOver = async (e) => {
+		e.preventDefault();
+		setPredictions([]);
+		setError(null);
+		setUserUploadedImage(null);
+	};
+
+	return (
+		<div>
+			<Head>
+				<title>스모어톡의 AI 프로필 생성기</title>
+				<meta
+					name="viewport"
+					content="initial-scale=1.0, width=device-width"
+				/>
+			</Head>
+
+			<main className="container text-center mx-auto p-5">
+				{error && <div>{error}</div>}
+				<h1 className="text-4xl font-medium">
+					{predictions.length > 0 ? "Results" : "AI Profile"}
+				</h1>
+				{predictions.length == 0 && <p>Turn your image to profile</p>}
+				<div className="flex flex-wrap">
+					<div className="mt-5 border-hairline w-[450px] mx-auto relative">
+						<Dropzone
+							onImageDropped={setUserUploadedImage}
+							predictions={predictions}
+							userUploadedImage={userUploadedImage}
+						/>
+						<div
+							className="bg-gray-50 relative h-[600px] w-full flex items-stretch"
+							// style={{ height: 0, paddingBottom: "100%" }}
+						>
+							<Canvas
+								predictions={[]}
+								userUploadedImage={userUploadedImage}
+								onDraw={() => {}}
+							/>
+						</div>
+					</div>
+					{predictions.length > 0 && (
+						<div className="mt-5 border-hairline w-[450px] mx-auto relative">
+							<div
+								className="bg-gray-50 relative h-[600px] w-full flex items-stretch"
+								// style={{ height: 0, paddingBottom: "100%" }}
+							>
+								<Canvas
+									predictions={predictions}
+									onDraw={() => {}}
+								/>
+							</div>
+						</div>
+					)}
+				</div>
+				<div className="max-w-[512px] mx-auto">
+					<PromptForm onSubmit={handleSubmit} />
+
+					<div className="text-center">
+						{((predictions.length > 0 &&
+							predictions[predictions.length - 1].output) ||
+							userUploadedImage) && (
+							<button className="lil-button" onClick={startOver}>
+								<StartOverIcon className="icon" />
+								New picture
+							</button>
+						)}
+
+						<Download predictions={predictions} />
+						<Link href="https://smoretalk.oopy.io/">
+							<a
+								className="lil-button"
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								<RocketIcon className="icon" />
+								AI Profile is a demo site from <u>Smoretalk</u>
+							</a>
+						</Link>
+					</div>
+				</div>
+			</main>
+		</div>
+	);
+}
+
+function readAsDataURL(file) {
+	return new Promise((resolve, reject) => {
+		const fr = new FileReader();
+		fr.onerror = reject;
+		fr.onload = () => {
+			resolve(fr.result);
+		};
+		fr.readAsDataURL(file);
+	});
 }
