@@ -6,6 +6,7 @@ import Canvas from "components/canvas";
 import PromptForm from "components/prompt-form";
 import Dropzone from "components/dropzone";
 import Download from "components/download";
+import Loading from "components/loading";
 import { XCircle as StartOverIcon } from "lucide-react";
 import * as Bytescale from "@bytescale/sdk";
 
@@ -14,45 +15,55 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export default function Home() {
 	const [predictions, setPredictions] = useState([]);
 	const [error, setError] = useState(null);
+	const [loading, setLoading] = useState(false);
 	const [userUploadedImage, setUserUploadedImage] = useState(null);
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+		setLoading(true);
 
-		const body = {
-			gender: e.target.gender.value,
-			image: userUploadedImage,
-			pose_image:
-				"https://upcdn.io/FW25bxn/raw/uploads/image%20-%202024-02-21T014551.557.png",
-		};
+		try {
+			const body = {
+				gender: e.target.gender.value,
+				image: userUploadedImage,
+				pose_image:
+					"https://upcdn.io/FW25bxn/raw/uploads/image%20-%202024-02-21T014551.557.png",
+			};
 
-		const response = await fetch("/api/predictions", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(body),
-		});
-		const prediction = await response.json();
+			const response = await fetch("/api/predictions", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(body),
+			});
+			const prediction = await response.json();
 
-		if (response.status !== 201) {
-			setError(prediction.detail);
-			return;
-		}
-		setPredictions(predictions.concat([prediction]));
-
-		while (
-			prediction.status !== "succeeded" &&
-			prediction.status !== "failed"
-		) {
-			await sleep(1000);
-			const response = await fetch("/api/predictions/" + prediction.id);
-			prediction = await response.json();
-			if (response.status !== 200) {
+			if (response.status !== 201) {
 				setError(prediction.detail);
 				return;
 			}
 			setPredictions(predictions.concat([prediction]));
+
+			while (
+				prediction.status !== "succeeded" &&
+				prediction.status !== "failed"
+			) {
+				await sleep(1000);
+				const response = await fetch(
+					"/api/predictions/" + prediction.id
+				);
+				prediction = await response.json();
+				if (response.status !== 200) {
+					setError(prediction.detail);
+					return;
+				}
+				setPredictions(predictions.concat([prediction]));
+			}
+		} catch (error) {
+			console.log(error);
+		} finally {
+			setLoading(false);
 		}
 	};
 
@@ -63,19 +74,27 @@ export default function Home() {
 		setUserUploadedImage(null);
 	};
 
+	console.log(predictions);
+
 	const onImageDropped = (file) => {
+		setLoading(true);
 		const uploadManager = new Bytescale.UploadManager({
 			apiKey: process.env.NEXT_PUBLIC_ACCOUNT_ID, // Get API key: https://www.bytescale.com/get-started
 		});
 
-		uploadManager.upload({ data: file }).then(
-			(resp) => {
-				setUserUploadedImage(resp.fileUrl);
-			},
-			(error) => {
-				alert(error);
-			}
-		);
+		uploadManager
+			.upload({ data: file })
+			.then(
+				(resp) => {
+					setUserUploadedImage(resp.fileUrl);
+				},
+				(error) => {
+					alert(error);
+				}
+			)
+			.finally(() => {
+				setLoading(false);
+			});
 	};
 
 	return (
@@ -89,6 +108,7 @@ export default function Home() {
 			</Head>
 
 			<main className="container text-center mx-auto p-5">
+				{loading && <Loading />}
 				{error && <div>{error}</div>}
 				<h1 className="text-4xl font-medium">
 					{predictions.length > 0 ? "Results" : "AI Profile"}

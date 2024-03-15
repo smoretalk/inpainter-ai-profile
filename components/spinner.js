@@ -3,7 +3,7 @@ import React from "react";
 // From https://tailwindcss.com/docs/animation
 const Spinner = () => (
 	<svg
-		className="animate-spin inline-block h-10 w-10"
+		className="animate-spin inline-block h-10 w-10 z-[100]"
 		xmlns="http://www.w3.org/2000/svg"
 		fill="none"
 		viewBox="0 0 24 24"
