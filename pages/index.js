@@ -1,12 +1,13 @@
 import { useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
+import Image from "next/image";
 import Canvas from "components/canvas";
 import PromptForm from "components/prompt-form";
 import Dropzone from "components/dropzone";
 import Download from "components/download";
 import { XCircle as StartOverIcon } from "lucide-react";
-import { Rocket as RocketIcon } from "lucide-react";
+import poseImage from "../public/pose-image.png";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -31,6 +32,7 @@ export default function Home() {
 				maskImage
 				? prevPredictionOutput
 				: null,
+			poseImage,
 		};
 
 		const response = await fetch("/api/predictions", {
@@ -136,13 +138,23 @@ export default function Home() {
 						)}
 
 						<Download predictions={predictions} />
-						<Link href="https://smoretalk.oopy.io/">
+					</div>
+					<div className="flex items-center">
+						<Image
+							src={"/smoretalk.svg"}
+							alt="smoretalk"
+							width={300}
+							height={41}
+						/>
+						<Link
+							href="https://smoretalk.oopy.io/"
+							className=" flex-shrink-0"
+						>
 							<a
-								className="lil-button"
+								className="lil-button whitespace-nowrap"
 								target="_blank"
 								rel="noopener noreferrer"
 							>
-								<RocketIcon className="icon" />
 								AI Profile is a demo site from <u>Smoretalk</u>
 							</a>
 						</Link>
