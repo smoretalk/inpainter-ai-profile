@@ -19,20 +19,12 @@ export default function Home() {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 
-		const prevPrediction = predictions[predictions.length - 1];
-		const prevPredictionOutput = prevPrediction?.output
-			? prevPrediction.output[prevPrediction.output.length - 1]
-			: null;
-		console.log(e.target.gender.value);
 		const body = {
-			prompt: e.target.gender.value,
-			init_image: userUploadedImage
+			gender: e.target.gender.value,
+			image: userUploadedImage
 				? await readAsDataURL(userUploadedImage)
-				: // only use previous prediction as init image if there's a mask
-				maskImage
-				? prevPredictionOutput
 				: null,
-			poseImage,
+			pose_image: poseImage,
 		};
 
 		const response = await fetch("/api/predictions", {
@@ -110,19 +102,20 @@ export default function Home() {
 							/>
 						</div>
 					</div>
-					{predictions.length > 0 && (
-						<div className="mt-5 border-hairline w-[450px] mx-auto relative">
-							<div
-								className="bg-gray-50 relative h-[600px] w-full flex items-stretch"
-								// style={{ height: 0, paddingBottom: "100%" }}
-							>
-								<Canvas
-									predictions={predictions}
-									onDraw={() => {}}
-								/>
+					{predictions.length > 0 &&
+						predictions[predictions.length - 1].output && (
+							<div className="mt-5 border-hairline w-[450px] mx-auto relative">
+								<div
+									className="bg-gray-50 relative h-[600px] w-full flex items-stretch"
+									// style={{ height: 0, paddingBottom: "100%" }}
+								>
+									<Canvas
+										predictions={predictions}
+										onDraw={() => {}}
+									/>
+								</div>
 							</div>
-						</div>
-					)}
+						)}
 				</div>
 				<div className="max-w-[512px] mx-auto">
 					<PromptForm onSubmit={handleSubmit} />
@@ -139,7 +132,7 @@ export default function Home() {
 
 						<Download predictions={predictions} />
 					</div>
-					<div className="flex items-center">
+					<div className="mt-8 flex items-center">
 						<Image
 							src={"/smoretalk.svg"}
 							alt="smoretalk"
